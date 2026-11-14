@@ -42,6 +42,13 @@ const closeOnCurrent= (href: string)=>{
                             href="/sign-in">Sign in
                             </Link>
                         </li>
+                        <li>
+                            <Link 
+                            onClick={()=> closeOnCurrent("/sign-up")}
+                            className="flex items-center w-full font-semibold" 
+                            href="/sign-up">Get started
+                            </Link>
+                        </li>
 
                         </>
                     ) : (

@@ -14,7 +14,7 @@ Chat with your PDF. Runs locally (Postgres + local file storage + in-app vector 
 4. `npm run db:push` (creates the tables)
 5. `npm run dev` and open http://localhost:3000
 
-Sign in with just an email (no password), upload a PDF (max 16MB, 50 pages) and start asking questions.
+Sign up with an email and password (min 8 characters), upload a PDF (max 16MB, 50 pages) and start asking questions.
 
 ## Deploy to Vercel
 
@@ -40,10 +40,13 @@ Notes:
 | `GEMINI_CHAT_MODEL` | `gemini-4-hydrogen` | Chat model |
 | `GEMINI_EMBED_MODEL` | `gemini-embedding-001` | Embedding model |
 | `AUTH_SECRET` | none | Signs the session cookie (HMAC-SHA256) |
+
 | `DATABASE_URL` | none | Postgres URL (pooled on Neon) |
 | `DATABASE_URL_UNPOOLED` | none | Direct Postgres URL, used by Prisma for schema push |
 | `BLOB_READ_WRITE_TOKEN` | none | Optional locally; set (auto on Vercel) to store PDFs in Vercel Blob |
 | `BLOB_ACCESS` | `private` | Access mode of the Blob store |
+
+Auth: email + password accounts. Passwords are hashed with scrypt (`node:crypto`, per-user random salt) and stored in `User.passwordHash`; the session is an HMAC-signed httpOnly cookie. Accounts created before passwords existed (no hash) can claim themselves by signing up with the same email. There is no rate limiting on sign-in/sign-up yet.
 
 ## How it works
 

@@ -32,9 +32,9 @@ const Navbar = async () => {
                             size: "sm"
                         })}>Sign in</Link>
 
-                        <Link href="/sign-in" className={buttonVariants({
+                        <Link href="/sign-up" className={buttonVariants({
                             size: "sm"
-                        })}>Get Started <ArrowRight className="ml-1.5 h-5 w-5"/>
+                        })}>Get started <ArrowRight className="ml-1.5 h-5 w-5"/>
                         </Link>
             
                     </> : <>

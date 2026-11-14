@@ -18,6 +18,7 @@ model User {
   id        String    @id @unique
   email     String    @unique
   name      String?
+  passwordHash String?
   File      File[]
   Message   Message[]
 }
