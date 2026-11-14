@@ -28,7 +28,6 @@ export default function Home() {
             className: "mt-5",
           })}
           href="/dashboard"
-          target="_blank"
         >
           Get Started <ArrowRight className="ml-2 h-5 w-5" />
         </Link>
