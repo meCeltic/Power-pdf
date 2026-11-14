@@ -12,6 +12,13 @@ export const maxDuration = 60
 export async function POST(req: NextRequest) {
   const user = await getUser()
   if (!user) return new NextResponse("UNAUTHORIZED", { status: 401 })
+  // Vercel's filesystem is read-only: disk uploads only work locally.
+  if (process.env.VERCEL) {
+    return new NextResponse(
+      "File storage is not configured: connect a Vercel Blob store (BLOB_READ_WRITE_TOKEN) and redeploy.",
+      { status: 503 }
+    )
+  }
 
   let form: FormData
   try {
