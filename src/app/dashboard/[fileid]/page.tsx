@@ -1,7 +1,7 @@
 import ChatWrapper from '@/components/chat/ChatWrapper';
 import PdfRenderer from '@/components/PdfRenderer';
 import { db } from '@/db';
-import { getKindeServerSession } from '@kinde-oss/kinde-auth-nextjs/server';
+import { getUser } from '@/lib/auth';
 import { notFound, redirect } from 'next/navigation';
 import React from 'react'
 
@@ -15,10 +15,9 @@ const page = async ({params}: PageProps) => {
     // retrieve file id
     const {fileid}= params;
 
-    const {getUser}= getKindeServerSession()
     const user= await getUser()
 
-    if (!user || !user.id) redirect(`/auth-callback?origin=dashboard/${fileid}`)
+    if (!user) redirect(`/sign-in?next=/dashboard/${fileid}`)
 
     // make database call    
     const file= await db.file.findFirst({

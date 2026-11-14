@@ -8,7 +8,7 @@ import { ChevronLeft, Loader2, XCircle } from 'lucide-react'
 import Link from 'next/link'
 import { buttonVariants } from '../ui/button'
 import { ChatContextProvider } from './ChatContext'
-import { UploadStatus } from '@prisma/client'
+type UploadStatus = 'PENDING' | 'PROCESSING' | 'FAILED' | 'SUCCESS'
 
 
 

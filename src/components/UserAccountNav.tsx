@@ -1,12 +1,9 @@
-import { getUserSubscriptionPlan } from '@/lib/stripe'
 import React from 'react'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from './ui/dropdown-menu'
 import { Button } from './ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar'
 import { Icons } from './icons'
 import Link from 'next/link'
-import { Gem } from 'lucide-react'
-import { LogoutLink } from '@kinde-oss/kinde-auth-nextjs/server'
 
 
 interface UserAccountProps{
@@ -15,9 +12,8 @@ interface UserAccountProps{
     imageUrl: string
 }
 
-const UserAccountNav = async ({email, imageUrl, name}: UserAccountProps) => {
+const UserAccountNav = ({email, imageUrl, name}: UserAccountProps) => {
 
-const subscriptionPlan= await getUserSubscriptionPlan()
   return (
     <DropdownMenu>
         <DropdownMenuTrigger asChild className='overflow-visible'>
@@ -54,18 +50,10 @@ const subscriptionPlan= await getUserSubscriptionPlan()
             <Link href='/dashboard'>Dashboard</Link>
         </DropdownMenuItem>
 
-        <DropdownMenuItem asChild>
-            {subscriptionPlan?.isSubscribed ? (
-                <Link href='/dashboard/billing'>Manage Subscription</Link>
-            ):(
-                <Link href='/pricing'>Upgrade <Gem className='text-blue-600 h-4 w-5 ml-1.5'/> </Link>
-            )}
-        </DropdownMenuItem>
-
         <DropdownMenuSeparator/>
 
         <DropdownMenuItem className='cursor-pointer'>
-            <LogoutLink>Log out</LogoutLink>
+            <a href='/api/auth/sign-out'>Log out</a>
         </DropdownMenuItem>
     </DropdownMenuContent>
 

@@ -99,7 +99,7 @@ export default function Home() {
             <div className="flex flex-col md:mx-3 space-y-2 border-l-4 border-zinc-300 py-2 pl-4 md:border-l-0 md:border-t-2 md:pb-0 md:pl-0 md:pt-4">
               <span className="text-sm font-medium text-blue-600">Step 1</span>
               <span className="text-xl font-semibold">Sign up for an account</span>
-              <span className="mt-2 text-zinc-700">Either start out with a free plan or choose our <Link href="/pricing" className="text-blue-700 underline-offset-2">pro plan</Link>.</span>
+              <span className="mt-2 text-zinc-700">Just enter your email. It is completely free and runs locally.</span>
             </div>
           </li>
           <li className="md:flex-1">

@@ -1,11 +1,16 @@
-import { withAuth } from "@kinde-oss/kinde-auth-nextjs/middleware";
-import { type NextRequest } from "next/server";
+import { NextResponse, type NextRequest } from "next/server"
+import { SESSION_COOKIE, verifySession } from "./lib/session"
 
-export default function middleware(req: NextRequest) {
-  return withAuth(req, {
-    isReturnToCurrentPage: true,
-  });
+export default async function middleware(req: NextRequest) {
+  const session = await verifySession(req.cookies.get(SESSION_COOKIE)?.value)
+  if (!session) {
+    const url = new URL("/sign-in", req.url)
+    url.searchParams.set("next", req.nextUrl.pathname)
+    return NextResponse.redirect(url)
+  }
+  return NextResponse.next()
 }
+
 export const config = {
-  matcher: ["/dashboard/:path*", "/auth-callback"],
-};
+  matcher: ["/dashboard/:path*"],
+}

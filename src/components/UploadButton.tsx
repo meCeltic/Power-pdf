@@ -6,83 +6,89 @@ import { Button } from './ui/button'
 import Dropzone from "react-dropzone"
 import { Cloud, File, Loader2 } from 'lucide-react'
 import { Progress } from './ui/progress'
-import { resolve } from 'path'
-import { useUploadThing } from '@/lib/uploadthing'
 import { useToast } from './ui/use-toast'
-import { trpc } from '@/app/_trpc/client'
 import { useRouter } from 'next/navigation'
+import { upload as blobUpload } from '@vercel/blob/client'
 
-const UploadDropzone = ({isSubscribed}: {isSubscribed: boolean})=>{
+type Mode= 'disk' | 'blob'
+type Access= 'private' | 'public'
+
+const UploadDropzone = ({mode, access, prefix}: {mode: Mode, access: Access, prefix: string})=>{
 
     const router= useRouter()
 
     const [isUploading, setIsUploading]= useState(false)
     const [uploadProgress, setUploadProgress]= useState(0)
 
-    const {startUpload}= useUploadThing(
-        isSubscribed? "proPlanUploader" : "freePlanUploader"
-    )
     const {toast}= useToast()
-    const {mutate: startPolling}= trpc.getFile.useMutation({
-        onSuccess: (file)=>{
-            router.push(`/dashboard/${file.id}`)
-        },
-        retry: true,
-        retryDelay: 500,
+
+    const fail= (description= "Please try again later")=>{
+        setIsUploading(false)
+        setUploadProgress(0)
+        toast({
+            title: "Something went wrong",
+            description,
+            variant: "destructive"
+        })
+    }
+
+    const upload= (file: File)=> new Promise<{id: string}>((resolve, reject)=>{
+        const xhr= new XMLHttpRequest()
+        xhr.open("POST", "/api/upload")
+        xhr.upload.onprogress= (e)=>{
+            // upload accounts for 0-90%; the rest is server-side indexing
+            if (e.lengthComputable) setUploadProgress(Math.round((e.loaded / e.total) * 90))
+        }
+        xhr.onload= ()=>{
+            if (xhr.status >= 200 && xhr.status < 300){
+                try { resolve(JSON.parse(xhr.responseText)) } catch { reject(new Error("Bad response")) }
+            } else reject(new Error(xhr.responseText || `Upload failed (${xhr.status})`))
+        }
+        xhr.onerror= ()=> reject(new Error("Network error"))
+        const body= new FormData()
+        body.append("file", file)
+        xhr.send(body)
     })
 
-    const startSimulatedProgress= () =>{
-        setUploadProgress(0)
-
-        const interval= setInterval(()=>{
-            setUploadProgress((prevProgress)=>{
-                if(prevProgress >= 95){ 
-                    clearInterval(interval)
-                    return prevProgress
-                }
-
-                return prevProgress + 5
-            })
-        }, 500)
-
-        return interval
+    // Blob mode: browser -> Vercel Blob directly (function bodies are capped at 4.5MB),
+    // then the server verifies and indexes the blob.
+    const uploadViaBlob= async (file: File)=>{
+        const safe= file.name.replace(/[^\w.-]+/g, "_").replace(/\.pdf$/i, "") || "document"
+        const pathname= `${prefix}${crypto.randomUUID()}-${safe}.pdf`
+        const blob= await blobUpload(pathname, file, {
+            access,
+            handleUploadUrl: "/api/blob-upload",
+            multipart: true,
+            contentType: "application/pdf",
+            onUploadProgress: (e)=> setUploadProgress(Math.round(e.percentage * 0.9)),
+        })
+        const res= await fetch("/api/files/register", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({pathname: blob.pathname, name: file.name}),
+        })
+        if (!res.ok) throw new Error((await res.text()) || `Upload failed (${res.status})`)
+        return (await res.json()) as {id: string}
     }
 
     return (
     <Dropzone 
-    multiple={false} 
+    multiple={false}
+    accept={{"application/pdf": [".pdf"]}}
+    maxSize={16 * 1024 * 1024}
+    onDropRejected={()=> fail("Please choose a PDF up to 16MB")}
     onDrop={async (acceptedFile)=>{
+        if (!acceptedFile[0]) return
         setIsUploading(true)
+        setUploadProgress(0)
 
-        const progressInterval = startSimulatedProgress()
-
-        //handle file uploading
-        const res= await startUpload(acceptedFile)
-
-        if (!res){
-            return toast({
-                title: "Something went wrong",
-                description: "Please try again later",
-                variant: "destructive"
-            })
+        try {
+            const {id}= mode==='blob' ? await uploadViaBlob(acceptedFile[0]) : await upload(acceptedFile[0])
+            setUploadProgress(100)
+            router.push(`/dashboard/${id}`)
+        } catch (err) {
+            fail(err instanceof Error ? err.message : undefined)
         }
-
-        const [fileResponse]= res
-        const key= fileResponse?.key
-
-        if (!key){
-            return toast({
-                title: "Something went wrong",
-                description: "Please try again later",
-                variant: "destructive"
-            })
-        }
-
-
-
-        clearInterval(progressInterval)
-        setUploadProgress(100)
-        startPolling({key})
     }}>
         {({getRootProps, getInputProps, acceptedFiles}) => (
             <div {...getRootProps()} className='border h-64 m-4 border-dashed border-gray-300 rounded-lg'>
@@ -93,7 +99,7 @@ const UploadDropzone = ({isSubscribed}: {isSubscribed: boolean})=>{
                             <p className="mb-2 text-sm text-zinc-700">
                                 <span className="font-semibold">Click to upload</span> or drag and drop.
                             </p>
-                            <p className='text-xs text-zinc-500'>PDF (up to {isSubscribed? "16" :"4"}MB)</p>
+                            <p className='text-xs text-zinc-500'>PDF (up to 16MB)</p>
                         </div>
 
                         {acceptedFiles && acceptedFiles[0] ? (
@@ -132,7 +138,7 @@ const UploadDropzone = ({isSubscribed}: {isSubscribed: boolean})=>{
 
 )}
 
-const UploadButton = ({isSubscribed}: {isSubscribed: boolean}) => {
+const UploadButton = ({mode='disk', access='private', prefix=''}: {mode?: Mode, access?: Access, prefix?: string}) => {
 
   const [isOpen, setIsOpen]= useState(false)  
   return (
@@ -145,7 +151,7 @@ const UploadButton = ({isSubscribed}: {isSubscribed: boolean}) => {
 
 
         <DialogContent>
-            <UploadDropzone isSubscribed={isSubscribed}/>
+            <UploadDropzone mode={mode} access={access} prefix={prefix}/>
         </DialogContent>
     </Dialog>
   )

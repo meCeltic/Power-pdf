@@ -11,34 +11,25 @@ generator client {
 datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  directUrl = env("DATABASE_URL_UNPOOLED")
 }
 
 model User {
-  id                     String    @id @unique //matches kinde user id
-  email                  String    @unique
-  File                   File[]
-  Message                Message[]
-  stripeCustomerId       String?   @unique @map(name: "stripe_customer_id")
-  stripeSubscriptionId   String?   @unique @map(name: "stripe_subscription_id")
-  stripePriceId          String?   @map(name: "stripe_price_id")
-  stripeCurrentPeriodEnd DateTime? @map(name: "stripe_current_period_end")
-}
-
-enum UploadStatus {
-  PENDING
-  PROCESSING
-  FAILED
-  SUCCESS
+  id        String    @id @unique
+  email     String    @unique
+  name      String?
+  File      File[]
+  Message   Message[]
 }
 
 model File {
   id           String       @id @default(cuid())
   name         String
-  uploadStatus UploadStatus @default(PENDING)
+  uploadStatus String       @default("PENDING") // PENDING | PROCESSING | FAILED | SUCCESS
   url          String
   key          String
   messages     Message[]
+  chunks       Chunk[]
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
   User         User?        @relation(fields: [userId], references: [id])
@@ -47,7 +38,7 @@ model File {
 
 model Message {
   id   String @id @default(cuid())
-  text String @db.Text()
+  text String @db.Text
 
   isUserMessage Boolean
 
@@ -57,4 +48,15 @@ model Message {
   userId    String?
   File      File?    @relation(fields: [fileId], references: [id])
   fileId    String?
+}
+
+model Chunk {
+  id        String @id @default(cuid())
+  file      File   @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  fileId    String
+  content   String @db.Text
+  embedding String @db.Text // JSON number[]
+  page      Int?
+
+  @@index([fileId])
 }

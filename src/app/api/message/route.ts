@@ -1,12 +1,9 @@
 import { db } from "@/db";
-import { openai } from "@/lib/openai";
-import { pinecone } from "@/lib/pinecone";
+import { embedTexts, streamChat } from "@/lib/gemini";
+import { topK } from "@/lib/vector";
+import { getUser } from "@/lib/auth";
 import { SendMessageValidator } from "@/lib/validators/SendMessageValidator";
-import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
-import { OpenAIEmbeddings } from "@langchain/openai";
-import { PineconeStore } from "@langchain/pinecone";
 import { NextRequest } from "next/server";
-import {OpenAIStream, StreamingTextResponse } from "ai"
 
 
 export const POST= async (req: NextRequest)=>{
@@ -14,10 +11,9 @@ export const POST= async (req: NextRequest)=>{
 
     const body= await req.json()
 
-    const {getUser}= getKindeServerSession()
-    const user= await getUser() 
+    const user= await getUser()
 
-    if (!user?.id) return new Response ("UNAUTHORIZED", {status: 401})
+    if (!user) return new Response ("UNAUTHORIZED", {status: 401})
 
 
     const {id: userId}= user
@@ -44,54 +40,36 @@ export const POST= async (req: NextRequest)=>{
         })
 
 
-        // 1. vectorize the message
+        // 1. vectorize the message and find the most similar chunks
+        let context = ""
+        try {
+            const [queryVec] = await embedTexts([message], "RETRIEVAL_QUERY")
+            const rows = await db.chunk.findMany({ where: { fileId } })
+            const items = rows.map((r) => ({ content: r.content, embedding: JSON.parse(r.embedding) as number[] }))
+            context = topK(queryVec, items, 4).map((r) => r.content).join('\n\n')
+        } catch (err) {
+            console.error("Retrieval failed:", err instanceof Error ? err.message : err)
+            return new Response("AI_ERROR", { status: 502 })
+        }
 
-        const embeddings=  new OpenAIEmbeddings({
-            openAIApiKey: process.env.OPENAI_API_KEY
-          })
-
-
-        const pineconeIndex= pinecone.Index("power-pdf")
-
-
-        const vectorStore= await PineconeStore.fromExistingIndex(embeddings, {
-            pineconeIndex,
-            namespace:file.id
-        })
-
-
-        const results= await vectorStore.similaritySearch(message, 4)
-
-
-        const prevMessages= await db.message.findMany({
+        // last 6 messages, oldest first (original code took the FIRST 6 ever)
+        const prevMessages= (await db.message.findMany({
             where:{
                 fileId
             },
             orderBy:{
-                createdAt: "asc"
+                createdAt: "desc"
             },
             take:6
-        })
-
+        })).reverse()
 
         const formattedMsgs= prevMessages.map((msg)=>({
             role: msg.isUserMessage ? "user" as const : "assistant" as const,
             content: msg.text
         }))
 
-        const response = await openai.chat.completions.create({
-            model: "gpt-4",
-            temperature: 0,
-            stream: true,
-            messages: [
-                {
-                  role: 'system',
-                  content:
-                    'Use the following pieces of context (or previous conversaton if needed) to answer the users question in markdown format.',
-                },
-                {
-                  role: 'user',
-                  content: `Use the following pieces of context (or previous conversaton if needed) to answer the users question in markdown format. \nIf you don't know the answer, just say that you don't know, don't try to make up an answer.
+        const system = 'Use the following pieces of context (or previous conversaton if needed) to answer the users question in markdown format.'
+        const prompt = `Use the following pieces of context (or previous conversaton if needed) to answer the users question in markdown format. \nIf you don't know the answer, just say that you don't know, don't try to make up an answer.
                   
             \n----------------\n
             
@@ -104,32 +82,41 @@ export const POST= async (req: NextRequest)=>{
             \n----------------\n
             
             CONTEXT:
-            ${results.map((r) => r.pageContent).join('\n\n')}
+            ${context}
             
-            USER INPUT: ${message}`,
-                },
-              ],     
-        })
-        // .asResponse()
-        
+            USER INPUT: ${message}`
 
-        //return as real time stream back to the client
-
-        const stream = OpenAIStream(response, {
-            async onCompletion(completion){
-                await db.message.create({
-                    data:{
-                        text: completion,
-                        isUserMessage: false,
-                        fileId,
-                        userId
+        // stream plain text chunks back to the client in real time
+        const encoder = new TextEncoder()
+        const gen = streamChat({ system, prompt, temperature: 0 })
+        const stream = new ReadableStream<Uint8Array>({
+            async start(controller) {
+                let full = ""
+                try {
+                    for await (const text of gen) {
+                        full += text
+                        controller.enqueue(encoder.encode(text))
                     }
-                })
-            }
+                    await db.message.create({
+                        data:{
+                            text: full,
+                            isUserMessage: false,
+                            fileId,
+                            userId
+                        }
+                    })
+                    controller.close()
+                } catch (err) {
+                    console.error("Chat stream failed:", err instanceof Error ? err.message : err)
+                    controller.error(err)
+                }
+            },
+            cancel() {
+                gen.return(undefined)
+            },
         })
 
-        
-        return new StreamingTextResponse(stream)
-
-
+        return new Response(stream, {
+            headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" },
+        })
 }

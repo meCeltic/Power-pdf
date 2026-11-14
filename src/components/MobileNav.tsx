@@ -37,30 +37,12 @@ const closeOnCurrent= (href: string)=>{
                         <>
                         <li>
                             <Link 
-                            onClick={()=> closeOnCurrent("/sign-up")}
-                            className="flex items-center w-full font-semibold text-green-600" 
-                            href="/sign-up">Get Started<ArrowRight className="ml-2 h-5 w-5"/>
-                            </Link>
-                        </li>
-
-                        <li className="my-3 h-px w-full bg-gray-300"/>
-
-                        <li>
-                            <Link 
                             onClick={()=> closeOnCurrent("/sign-in")}
                             className="flex items-center w-full font-semibold" 
                             href="/sign-in">Sign in
                             </Link>
                         </li>
 
-                        <li className="my-3 h-px w-full bg-gray-300"/>
-                        <li>
-                            <Link 
-                            onClick={()=> closeOnCurrent("/pricing")}
-                            className="flex items-center w-full font-semibold" 
-                            href="/pricing">Pricing
-                            </Link>
-                        </li>
                         </>
                     ) : (
                         <>
@@ -76,7 +58,7 @@ const closeOnCurrent= (href: string)=>{
                         <li>
                             <Link 
                             className="flex items-center w-full font-semibold" 
-                            href="/sign-out">Sign Out
+                            href="/api/auth/sign-out">Sign Out
                             </Link>
                         </li></>
                     )}
