@@ -5,6 +5,7 @@ import Messages from './Messages'
 import ChatInput from './ChatInput'
 import { trpc } from '@/app/_trpc/client'
 import { ChevronLeft, Loader2, XCircle } from 'lucide-react'
+import { PAGES_PER_PDF } from '@/config/limits'
 import Link from 'next/link'
 import { buttonVariants } from '../ui/button'
 import { ChatContextProvider } from './ChatContext'
@@ -64,8 +65,8 @@ useEffect(() => {
       <div className="flex-1 flex justify-center items-center flex-col mb-28">
         <div className="flex flex-col items-center gap-2">
           <XCircle className='h-8 2-8 text-red-500'/>
-          <h3 className="font-semibold text-xl">Too many pages in PDF</h3>
-          <p className="text-zinc-500 text-sm">Your <span className='font-medium'>Free</span> plan supports upto 5 pages per PDF.</p>
+          <h3 className="font-semibold text-xl">Processing failed</h3>
+          <p className="text-zinc-500 text-sm text-center max-w-xs">We couldn&apos;t read this PDF. It may be over {PAGES_PER_PDF} pages, have no selectable text (scanned image), or the AI service is unavailable. Delete it and try again.</p>
 
           <Link href="/dashboard" className={buttonVariants({
             variant: "secondary",

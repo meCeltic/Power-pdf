@@ -8,16 +8,21 @@ export const runtime = "nodejs"
 
 /** Issues short-lived client tokens so the browser can upload straight to Vercel Blob. */
 export async function POST(request: Request) {
-  const user = await getUser()
-  if (!user) return new NextResponse("UNAUTHORIZED", { status: 401 })
   if (!process.env.BLOB_READ_WRITE_TOKEN) return new NextResponse("Blob storage is not configured", { status: 400 })
 
   const body = (await request.json()) as HandleUploadBody
+  // Vercel's "upload completed" callback has no user cookie; handleUpload verifies its signature itself.
+  // Only token requests from the browser need a signed-in user.
+  const user = await getUser()
+  if (body.type === "blob.generate-client-token" && !user) {
+    return new NextResponse("UNAUTHORIZED", { status: 401 })
+  }
   try {
     const json = await handleUpload({
       body,
       request,
       onBeforeGenerateToken: async (pathname) => {
+        if (!user) throw new Error("UNAUTHORIZED")
         if (!isOwnedBlobPath(pathname, user.id) || !pathname.toLowerCase().endsWith(".pdf")) {
           throw new Error(`Pathname must start with ${blobPrefixFor(user.id)} and end with .pdf`)
         }
