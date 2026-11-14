@@ -5,6 +5,10 @@ import { getUser } from "@/lib/auth";
 import { SendMessageValidator } from "@/lib/validators/SendMessageValidator";
 import { NextRequest } from "next/server";
 
+export const runtime = "nodejs"
+// Vercel Hobby caps functions at 60s; streamed answers need more than the 10s default.
+export const maxDuration = 60
+
 
 export const POST= async (req: NextRequest)=>{
     // endpoint for asking questions to the pdf file

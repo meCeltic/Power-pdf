@@ -8,7 +8,7 @@ import { deletePdf, headBlob, isBlobMode, readPdf } from "@/lib/storage"
 import { MAX_UPLOAD_MB } from "@/config/limits"
 
 export const runtime = "nodejs"
-export const maxDuration = 300
+export const maxDuration = 60
 
 /** Blob mode: called by the browser after a direct-to-Blob upload. Verifies, indexes, creates the File row. */
 export async function POST(req: NextRequest) {
