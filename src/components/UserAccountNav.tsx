@@ -50,6 +50,10 @@ const UserAccountNav = ({email, imageUrl, name}: UserAccountProps) => {
             <Link href='/dashboard'>Dashboard</Link>
         </DropdownMenuItem>
 
+        <DropdownMenuItem asChild>
+            <Link href='/pricing'>Upgrade to Pro ✨</Link>
+        </DropdownMenuItem>
+
         <DropdownMenuSeparator/>
 
         <DropdownMenuItem className='cursor-pointer'>

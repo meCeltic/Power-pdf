@@ -26,6 +26,10 @@ const Navbar = async () => {
                 <MobileNav isAuth={!!user}/>
 
                 <div className="hidden sm:flex">
+                    <Link href="/pricing" className={buttonVariants({
+                        variant: "ghost",
+                        size: "sm"
+                    })}>Pricing</Link>
                     { !user ? <>
                         <Link href="/sign-in" className={buttonVariants({
                             variant: "ghost",

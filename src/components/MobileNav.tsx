@@ -36,7 +36,14 @@ const closeOnCurrent= (href: string)=>{
                     {!isAuth? (
                         <>
                         <li>
-                            <Link 
+                            <Link
+                            onClick={()=> closeOnCurrent("/pricing")}
+                            className="flex items-center w-full font-semibold"
+                            href="/pricing">Pricing
+                            </Link>
+                        </li>
+                        <li>
+                            <Link
                             onClick={()=> closeOnCurrent("/sign-in")}
                             className="flex items-center w-full font-semibold" 
                             href="/sign-in">Sign in
@@ -58,6 +65,13 @@ const closeOnCurrent= (href: string)=>{
                             onClick={()=> closeOnCurrent("/dashboard")}
                             className="flex items-center w-full font-semibold" 
                             href="/dashboard">Dashboard
+                            </Link>
+                        </li>
+                        <li>
+                            <Link
+                            onClick={()=> closeOnCurrent("/pricing")}
+                            className="flex items-center w-full font-semibold"
+                            href="/pricing">Upgrade to Pro ✨
                             </Link>
                         </li>
 
